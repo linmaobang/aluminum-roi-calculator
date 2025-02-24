@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>铝压铸ROI计算器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="js/validation.js"></script>
+    <script src="js/calculator.js"></script>
+    <script src="js/charts.js"></script>
+    <script src="js/main.js"></script>
+</head>
+<body class="bg-gray-50">
+    <div class="container mx-auto p-4">
+        <h1 class="text-2xl font-bold text-center mb-8">铝压铸MES投资回报计算器</h1>
+        
+        <!-- 基础参数输入区 -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+            <h2 class="text-xl font-semibold mb-4">基础参数设置</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div class="input-group">
+                    <label class="block text-sm font-medium text-gray-700">年产值（亿元）</label>
+                    <input type="number" id="annualOutput" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm" value="2" step="0.1">
+                    <span class="text-xs text-gray-500">影响OEE提升的直接经济效益</span>
+                </div>
+                <div class="input-group">
+                    <label class="block text-sm font-medium text-gray-700">当前OEE（%）</label>
+                    <input type="number" id="currentOEE" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm" value="65">
+                    <span class="text-xs text-gray-500">设备综合效率基线</span>
+                </div>
+                <div class="input-group">
+                    <label class="block text-sm font-medium text-gray-700">年用铝量（吨）</label>
+                    <input type="number" id="aluminumConsumption" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm" value="2200">
+                    <span class="text-xs text-gray-500">影响废品率改善的材料节省</span>
+                </div>
+                <div class="input-group">
+                    <label class="block text-sm font-medium text-gray-700">废品率（%）</label>
+                    <input type="number" id="defectRate" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm" value="4" step="0.1">
+                    <span class="text-xs text-gray-500">当前废品率水平</span>
+                </div>
+                <div class="input-group">
+                    <label class="block text-sm font-medium text-gray-700">人工成本（万元/年）</label>
+                    <input type="number" id="laborCost" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm" value="300" step="10">
+                    <span class="text-xs text-gray-500">年度人工总成本</span>
+                </div>
+                <div class="input-group">
+                    <label class="block text-sm font-medium text-gray-700">库存资金（万元）</label>
+                    <input type="number" id="inventoryValue" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm" value="1000" step="100">
+                    <span class="text-xs text-gray-500">平均库存占用资金</span>
+                </div>
+            </div>
+            <div class="mt-6 p-4 bg-gray-50 rounded-lg">
+                <h3 class="font-semibold mb-2">收益计算逻辑说明：</h3>
+                <ul class="text-sm text-gray-600 space-y-2">
+                    <li>• OEE提升收益 = 年产值 × OEE提升百分比 × 产能利用率系数(0.8)</li>
+                    <li>• 质量改善收益 = 年用铝量 × 铝材单价(1.5万元/吨) × 废品率改善百分比</li>
+                    <li>• 人工效率收益 = 年人工成本 × 效率提升百分比</li>
+                    <li>• 换膜时间收益 = 年产值 × 换膜时间占比 × 改善百分比 × 产能利用率系数(0.8)</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- 效益调整面板 -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+            <h2 class="text-xl font-semibold mb-4">效益调整与MES贡献度</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="adjustment-group">
+                    <label class="flex justify-between">
+                        <span class="text-sm font-medium text-gray-700">OEE提升幅度</span>
+                        <span class="text-sm text-blue-600" id="oeeAdjustValue">+5%</span>
+                    </label>
+                    <input type="range" id="oeeAdjust" 
+                           class="w-full h-2 bg-gray-200 rounded-lg cursor-pointer accent-blue-600"
+                           min="0" max="15" value="5" step="1">
+                    <div class="flex justify-between text-xs text-gray-500">
+                        <span>0%</span>
+                        <span>+15%</span>
+                    </div>
+                    <div class="mt-2">
+                        <label class="flex justify-between text-xs">
+                            <span class="text-gray-600">MES贡献度</span>
+                            <span class="text-blue-600" id="oeeContributionValue">70%</span>
+                        </label>
+                        <input type="range" id="oeeContribution"
+                               class="w-full h-1 bg-blue-100 rounded-lg cursor-pointer accent-blue-600"
+                               min="30" max="90" value="70" step="5">
+                    </div>
+                </div>
+                
+                <div class="adjustment-group">
+                    <label class="flex justify-between">
+                        <span class="text-sm font-medium text-gray-700">废品率改善</span>
+                        <span class="text-sm text-blue-600" id="defectAdjustValue">-1%</span>
+                    </label>
+                    <input type="range" id="defectAdjust"
+                           class="w-full h-2 bg-gray-200 rounded-lg cursor-pointer accent-blue-600"
+                           min="0" max="3" value="1" step="0.1">
+                    <div class="flex justify-between text-xs text-gray-500">
+                        <span>0%</span>
+                        <span>-3%</span>
+                    </div>
+                    <div class="mt-2">
+                        <label class="flex justify-between text-xs">
+                            <span class="text-gray-600">MES贡献度</span>
+                            <span class="text-blue-600" id="defectContributionValue">80%</span>
+                        </label>
+                        <input type="range" id="defectContribution"
+                               class="w-full h-1 bg-blue-100 rounded-lg cursor-pointer accent-blue-600"
+                               min="40" max="90" value="80" step="5">
+                    </div>
+                </div>
+                
+                <div class="adjustment-group">
+                    <label class="flex justify-between">
+                        <span class="text-sm font-medium text-gray-700">人工效率提升</span>
+                        <span class="text-sm text-blue-600" id="laborAdjustValue">+10%</span>
+                    </label>
+                    <input type="range" id="laborAdjust"
+                           class="w-full h-2 bg-gray-200 rounded-lg cursor-pointer accent-blue-600"
+                           min="0" max="30" value="10" step="1">
+                    <div class="flex justify-between text-xs text-gray-500">
+                        <span>0%</span>
+                        <span>+30%</span>
+                    </div>
+                    <div class="mt-2">
+                        <label class="flex justify-between text-xs">
+                            <span class="text-gray-600">MES贡献度</span>
+                            <span class="text-blue-600" id="laborContributionValue">50%</span>
+                        </label>
+                        <input type="range" id="laborContribution"
+                               class="w-full h-1 bg-blue-100 rounded-lg cursor-pointer accent-blue-600"
+                               min="20" max="80" value="50" step="5">
+                    </div>
+                </div>
+                
+                <div class="adjustment-group">
+                    <label class="flex justify-between">
+                        <span class="text-sm font-medium text-gray-700">换膜时间缩短</span>
+                        <span class="text-sm text-blue-600" id="moldChangeAdjustValue">-20%</span>
+                    </label>
+                    <input type="range" id="moldChangeAdjust"
+                           class="w-full h-2 bg-gray-200 rounded-lg cursor-pointer accent-blue-600"
+                           min="0" max="50" value="20" step="5">
+                    <div class="flex justify-between text-xs text-gray-500">
+                        <span>0%</span>
+                        <span>-50%</span>
+                    </div>
+                    <div class="mt-2">
+                        <label class="flex justify-between text-xs">
+                            <span class="text-gray-600">MES贡献度</span>
+                            <span class="text-blue-600" id="moldChangeContributionValue">60%</span>
+                        </label>
+                        <input type="range" id="moldChangeContribution"
+                               class="w-full h-1 bg-blue-100 rounded-lg cursor-pointer accent-blue-600"
+                               min="20" max="80" value="60" step="5">
+                    </div>
+                    <span class="text-xs text-gray-500 mt-1">假设换膜时间占总工时5%</span>
+                </div>
+            </div>
+            <!-- 添加计算按钮 -->
+            <div class="mt-6 flex justify-center">
+                <button id="calculateBtn" 
+                        class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 
+                               transition-colors duration-200 flex items-center gap-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                              d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+                    </svg>
+                    <span>计算收益</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- 结果展示区 -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <h2 class="text-xl font-semibold mb-4">收益预测</h2>
+                <canvas id="radarChart"></canvas>
+            </div>
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <h2 class="text-xl font-semibold mb-4">关键指标</h2>
+                <div id="keyMetrics" class="grid grid-cols-2 gap-4">
+                    <!-- 动态填充指标 -->
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html> 
